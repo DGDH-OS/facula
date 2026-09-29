@@ -75,7 +75,7 @@ export function ExportTab(props: {
     ) : (
       <div className="hidden space-y-8 print:block">
         <h1 className="font-display text-3xl text-marine">Toetsweekplanner</h1>
-        <OverzichtTab analyses={analyses} signalen={signalen} />
+        <OverzichtTab analyses={analyses} signalen={signalen} privacyGeblokkeerd={privacy.blokkeer} />
         <NakijkplanningTab items={items} nakijkplanning={nakijkplanning} />
       </div>
     )}

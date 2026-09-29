@@ -171,7 +171,9 @@ export function ToetsweekPlanner() {
             vulVoorbeeldIn={() => setItems(voorbeelditems())}
           />
         )}
-        {tab === "overzicht" && <OverzichtTab analyses={analyses} signalen={signalen} />}
+        {tab === "overzicht" && (
+          <OverzichtTab analyses={analyses} signalen={signalen} privacyGeblokkeerd={privacy.blokkeer} />
+        )}
         {tab === "nakijkplanning" && (
           <NakijkplanningTab items={items} nakijkplanning={nakijkplanning} />
         )}

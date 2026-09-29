@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Field, VELD_KLASSEN } from "@/components/ui/Field";
 import { berekenCijfer, valideerInitialen } from "@/lib/nakijken/rubric";
 import { maakFeedback, totaalPunten } from "@/lib/nakijken/feedback";
+import { AiAssistPaneel } from "@/components/ai/AiAssistPaneel";
 import type { Leerling, Niveau, Rubric } from "@/lib/nakijken";
 
 export function LeerlingBeoordeling({
@@ -26,6 +28,10 @@ export function LeerlingBeoordeling({
   const initialenFout = initialen.trim() && !valideerInitialen(initialen)
     ? "Gebruik alleen initialen, bijvoorbeeld L.J."
     : "";
+  const [aiOverrides, setAiOverrides] = useState<Record<string, string>>({});
+  function feedbackVoor(leerling: Leerling): string {
+    return aiOverrides[leerling.id] ?? maakFeedback(rubric, leerling);
+  }
   function voegLeerlingToe() {
     const waarde = initialen.trim();
     if (!waarde || initialenFout) return;
@@ -50,6 +56,13 @@ export function LeerlingBeoordeling({
           : leerling,
       ),
     );
+    setAiOverrides((current) => {
+      const leerlingId = leerlingen[leerlingIndex]?.id;
+      if (!leerlingId || !(leerlingId in current)) return current;
+      const rest = { ...current };
+      delete rest[leerlingId];
+      return rest;
+    });
   }
   return (
     <section className="space-y-6">
@@ -135,15 +148,21 @@ export function LeerlingBeoordeling({
             className={`${VELD_KLASSEN} mt-2`}
             rows={3}
             value={leerling.notitie}
-            onChange={(event) =>
+            onChange={(event) => {
               setLeerlingen((current) =>
                 current.map((item, index) =>
                   index === leerlingIndex
                     ? { ...item, notitie: event.target.value }
                     : item,
                 ),
-              )
-            }
+              );
+              setAiOverrides((current) => {
+                if (!(leerling.id in current)) return current;
+                const rest = { ...current };
+                delete rest[leerling.id];
+                return rest;
+              });
+            }}
           />
           <p className="mt-3 text-base font-semibold text-marine">
             Punten: {totaalPunten(rubric, leerling)} / {rubric.maxPunten}
@@ -155,10 +174,18 @@ export function LeerlingBeoordeling({
           </p>
           <Button
             className="mt-3"
-            onClick={() => kopieer(maakFeedback(rubric, leerling))}
+            onClick={() => kopieer(feedbackVoor(leerling))}
           >
             Kopieer feedback
           </Button>
+          <AiAssistPaneel
+            taak="nakijk_feedback_verbeter"
+            label="Verbeter feedback met AI"
+            tekst={maakFeedback(rubric, leerling)}
+            onGebruik={(voorstel) =>
+              setAiOverrides((current) => ({ ...current, [leerling.id]: voorstel }))
+            }
+          />
         </article>
       ))}
       <div className="flex flex-wrap gap-3">
@@ -168,7 +195,7 @@ export function LeerlingBeoordeling({
               leerlingen
                 .map(
                   (leerling) =>
-                    `${leerling.initialen}\n${maakFeedback(rubric, leerling)}`,
+                    `${leerling.initialen}\n${feedbackVoor(leerling)}`,
                 )
                 .join("\n\n"),
             )

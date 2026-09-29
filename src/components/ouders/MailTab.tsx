@@ -1,8 +1,10 @@
 "use client";
+import { useState } from "react";
 import { valideerInitialen } from "@/lib/nakijken/rubric";
 import { maakOudermail, type MailInput } from "@/lib/ouders/mail";
 import { privacyOuders } from "@/lib/ouders/privacy";
 import { AANLEIDINGEN } from "@/lib/ouders/templates";
+import { AiAssistPaneel } from "@/components/ai/AiAssistPaneel";
 import { Veld, inputClass } from "./Veld";
 import { OuderOutput } from "./OuderOutput";
 export function MailTab({
@@ -12,7 +14,9 @@ export function MailTab({
   mail: MailInput;
   setMail: (mail: MailInput) => void;
 }) {
-  const output = maakOudermail(mail);
+  const gegenereerd = maakOudermail(mail);
+  const [aiVoorstel, setAiVoorstel] = useState<{ subject: string; body: string } | null>(null);
+  const output = aiVoorstel ?? gegenereerd;
   const privacy = privacyOuders(`${output.subject}\n${output.body}`);
   const mailto = [
     "mailto:?subject=",
@@ -20,8 +24,10 @@ export function MailTab({
     "&body=",
     encodeURIComponent(output.body),
   ].join("");
-  const update = (key: keyof MailInput, value: string) =>
+  const update = (key: keyof MailInput, value: string) => {
+    setAiVoorstel(null);
     setMail({ ...mail, [key]: value } as MailInput);
+  };
   return (
     <section className="grid gap-6 lg:grid-cols-2">
       <div className="space-y-4 rounded-xl border-2 border-lijn bg-ivoor p-5">
@@ -120,13 +126,26 @@ export function MailTab({
           onChange={(value) => update("naam", value)}
         />
       </div>
-      <OuderOutput
-        titel="Mailtekst"
-        onderwerp={output.subject}
-        tekst={output.body}
-        privacy={privacy}
-        mailto={mailto}
-      />
+      <div>
+        <OuderOutput
+          titel="Mailtekst"
+          onderwerp={output.subject}
+          tekst={output.body}
+          privacy={privacy}
+          mailto={mailto}
+        />
+        <AiAssistPaneel
+          taak="ouder_mail_verbeter"
+          label="Verbeter met AI"
+          onderwerp={gegenereerd.subject}
+          tekst={gegenereerd.body}
+          toon={`toon: ${mail.toon}`}
+          disabledReden={privacy.blokkeer ? "Los eerst de privacyblokkade op." : null}
+          onGebruik={(voorstel, aiOnderwerp) =>
+            setAiVoorstel({ subject: aiOnderwerp ?? gegenereerd.subject, body: voorstel })
+          }
+        />
+      </div>
     </section>
   );
 }

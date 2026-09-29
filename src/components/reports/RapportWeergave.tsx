@@ -7,6 +7,7 @@ import { downloadRapportDocx } from "@/lib/report-docx-export";
 import { useHuisstijl, useLogoKeuze } from "@/lib/huisstijl/client";
 import { HuisstijlSchakelaars } from "@/components/huisstijl/HuisstijlSchakelaars";
 import { AiMelding } from "@/components/ui/AiMelding";
+import { AiAssistPaneel } from "@/components/ai/AiAssistPaneel";
 import { Button } from "@/components/ui/Button";
 import { ErrorNotice } from "@/components/ui/Notice";
 import { controleerRapportKwaliteit } from "@/lib/report-quality";
@@ -147,6 +148,12 @@ export function RapportWeergave({
         )}
         <textarea aria-label="Rapporttekst bewerken" value={tekst} onChange={(event) => setTekst(event.target.value)} rows={12} className="mt-4 min-h-64 w-full rounded-lg border-2 border-lijn bg-ivoor px-4 py-3 font-sans text-base leading-relaxed text-tekst focus:border-marine focus:outline-none focus:ring-2 focus:ring-marine" />
         <p className="mt-4 text-base text-tekst-zacht">{TRANSPARANTIE} <Link href="/privacy/rapport-module" className="font-semibold text-marine underline">Lees de privacy-uitleg</Link>.</p>
+        <AiAssistPaneel
+          taak="rapport_herformuleer"
+          label="Herformuleer met AI"
+          tekst={tekst}
+          onGebruik={(voorstel) => setTekst(voorstel)}
+        />
       </article>
 
       <div className="rounded-xl border-2 border-lijn bg-ivoor px-5 py-4" aria-live="polite">
