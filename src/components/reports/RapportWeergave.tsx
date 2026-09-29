@@ -57,6 +57,21 @@ export function RapportWeergave({
   );
   const exportHintId = "rapport-export-hint";
 
+  // leerlingLabel is hier bekend: die gaat nooit mee naar de AI, ook al is
+  // het veld bedoeld voor een voornaam of initialen. Vervangen door "de
+  // leerling" vóór verzending, na ontvangst van het voorstel weer lokaal
+  // terugzetten.
+  const leerlingVervangbaar = rapport.input.leerlingLabel.trim();
+  const PLACEHOLDER = "de leerling";
+  function vervangLeerling(waarde: string): string {
+    if (!leerlingVervangbaar) return waarde;
+    return waarde.split(leerlingVervangbaar).join(PLACEHOLDER);
+  }
+  function herstelLeerling(waarde: string): string {
+    if (!leerlingVervangbaar) return waarde;
+    return waarde.split(PLACEHOLDER).join(leerlingVervangbaar);
+  }
+
   async function handleCopy() {
     const actueleGuardrail = controleerOutputTegenInvoer(rapport.input.aantekeningen, tekst);
     if (rapportExportGeblokkeerd(actueleGuardrail.ok, checks, kwaliteit)) {
@@ -151,8 +166,8 @@ export function RapportWeergave({
         <AiAssistPaneel
           taak="rapport_herformuleer"
           label="Herformuleer met AI"
-          tekst={tekst}
-          onGebruik={(voorstel) => setTekst(voorstel)}
+          tekst={vervangLeerling(tekst)}
+          onGebruik={(voorstel) => setTekst(herstelLeerling(voorstel))}
         />
       </article>
 

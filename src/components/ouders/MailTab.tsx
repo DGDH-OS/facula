@@ -17,6 +17,22 @@ export function MailTab({
   const gegenereerd = maakOudermail(mail);
   const [aiVoorstel, setAiVoorstel] = useState<{ subject: string; body: string } | null>(null);
   const output = aiVoorstel ?? gegenereerd;
+
+  // De leerlingnaam is hier bekend (mail.leerling): die gaat nooit mee naar
+  // de AI, ook al is het veld bedoeld voor initialen en typt een docent er
+  // toch een keer een volledige naam in. Vervangen door "de leerling" vóór
+  // verzending, na ontvangst van het voorstel weer lokaal terugzetten.
+  const leerlingVervangbaar =
+    mail.leerling.trim() && mail.leerling.trim() !== "uw kind" ? mail.leerling.trim() : "";
+  const PLACEHOLDER = "de leerling";
+  function vervangLeerling(tekst: string): string {
+    if (!leerlingVervangbaar) return tekst;
+    return tekst.split(leerlingVervangbaar).join(PLACEHOLDER);
+  }
+  function herstelLeerling(tekst: string): string {
+    if (!leerlingVervangbaar) return tekst;
+    return tekst.split(PLACEHOLDER).join(leerlingVervangbaar);
+  }
   const privacy = privacyOuders(`${output.subject}\n${output.body}`);
   const mailto = [
     "mailto:?subject=",
@@ -137,12 +153,15 @@ export function MailTab({
         <AiAssistPaneel
           taak="ouder_mail_verbeter"
           label="Verbeter met AI"
-          onderwerp={gegenereerd.subject}
-          tekst={gegenereerd.body}
+          onderwerp={vervangLeerling(gegenereerd.subject)}
+          tekst={vervangLeerling(gegenereerd.body)}
           toon={`toon: ${mail.toon}`}
           disabledReden={privacy.blokkeer ? "Los eerst de privacyblokkade op." : null}
           onGebruik={(voorstel, aiOnderwerp) =>
-            setAiVoorstel({ subject: aiOnderwerp ?? gegenereerd.subject, body: voorstel })
+            setAiVoorstel({
+              subject: herstelLeerling(aiOnderwerp ?? gegenereerd.subject),
+              body: herstelLeerling(voorstel),
+            })
           }
         />
       </div>
