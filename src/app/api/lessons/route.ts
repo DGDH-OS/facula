@@ -5,6 +5,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { quotaBoodschap, saveWithQuota } from "@/lib/quota";
 import { haalVerbruik } from "@/lib/school";
 import { clampInt, limitString, readBodyWithLimit } from "@/lib/validation";
+import { privacyGate, privacyGateUitleg } from "@/lib/ai/privacy-gate";
 
 /**
  * Een AI-les kost ongeveer 22 seconden, en bij een terugval op het tweede
@@ -56,13 +57,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Ongeldige aanvraag." }, { status: 400 });
   }
 
-  const leerdoel = limitString(body.leerdoel, 2000);
-  if (!leerdoel) {
+  const leerdoelRuw = limitString(body.leerdoel, 2000);
+  if (!leerdoelRuw) {
     return NextResponse.json(
       { error: "Leerdoel is verplicht en mag maximaal 2000 tekens zijn." },
       { status: 400 }
     );
   }
+
+  // Leerdoel gaat naar hetzelfde model als de AI-assistlaag, dus door dezelfde
+  // privacy-poort: geen e-mail, telefoon, BSN, medische term of naam de AI in.
+  const leerdoelGate = privacyGate(leerdoelRuw);
+  if (!leerdoelGate.ok) {
+    return NextResponse.json(
+      { error: privacyGateUitleg(leerdoelGate.redenen), redenen: leerdoelGate.redenen },
+      { status: 422 }
+    );
+  }
+  const leerdoel = leerdoelGate.genormaliseerd;
 
   const lesduur =
     body.lesduur === undefined ? 50 : clampInt(body.lesduur, 10, 240);
