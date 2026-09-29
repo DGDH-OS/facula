@@ -147,10 +147,11 @@ export function createVertexProvider(opties: VertexOpties): LessonAIProvider {
         });
 
         if (!response.ok) {
-          // Alleen status en een afgekapt stuk body loggen: een foutbody van
-          // Google kan de hele request echoën, en die bevat de docentinvoer.
-          const body = (await response.text()).slice(0, 300);
-          throw new Error("Vertex AI gaf HTTP " + response.status + ": " + body);
+          // Alleen de statuscode: deze foutmelding komt in `pogingen` terecht
+          // en die wordt in de serverlog gezet (src/app/api/lessons/route.ts).
+          // Een foutbody van Google kan de hele request echoën, en die bevat
+          // de docentinvoer, dus die mag nooit in de log belanden.
+          throw new Error("Vertex AI gaf HTTP " + response.status + ".");
         }
 
         const data = (await response.json()) as VertexResponse;

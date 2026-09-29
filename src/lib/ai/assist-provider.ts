@@ -121,8 +121,10 @@ export async function genereerAssistVoorstel(
     });
 
     if (!response.ok) {
-      const body = (await response.text()).slice(0, 300);
-      throw new Error("Vertex AI gaf HTTP " + response.status + ": " + body);
+      // Alleen de statuscode in de foutmelding: die belandt in de serverlog
+      // via de aanroepende route, en een providerresponse kan modeloutput of
+      // geëchode invoer bevatten die daar nooit in hoort te staan.
+      throw new Error("Vertex AI gaf HTTP " + response.status + ".");
     }
 
     const data = (await response.json()) as VertexResponse;
