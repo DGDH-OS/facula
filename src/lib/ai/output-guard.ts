@@ -55,7 +55,14 @@ function bouwGetalwoorden(): string[] {
   const tienen = [
     "", "", "twintig", "dertig", "veertig", "vijftig", "zestig", "zeventig", "tachtig", "negentig",
   ];
-  const woorden = new Set<string>(["nul", "zero", "één", "honderd", ...eenheden.slice(1), ...tienTotTwintig]);
+  const woorden = new Set<string>([
+    "nul",
+    "zero",
+    "één",
+    "honderd",
+    ...eenheden.slice(1),
+    ...tienTotTwintig,
+  ]);
   for (let t = 2; t <= 9; t++) {
     woorden.add(tienen[t]);
     for (let e = 1; e <= 9; e++) {
