@@ -75,10 +75,14 @@ export default function AiPage() {
               </p>
               <p className="mt-2 text-base leading-relaxed text-tekst">
                 Facula bewaart geen aparte kopie van wat naar het model
-                gestuurd is, en logt de inhoud nergens: alleen welke taak
-                het was, hoe lang het duurde en of het lukte. De
-                gegenereerde les, toets of tekst zelf sla je zelf op, in je
-                eigen account, zoals bij elk ander onderdeel van Facula.
+                gestuurd is, en zet de inhoud van wat je invoert of wat het
+                model teruggeeft niet in onze eigen logs: daar staat alleen
+                welke taak het was, hoe lang het duurde en of het lukte.
+                Google Cloud, onze hostingpartij, houdt daarnaast eigen
+                technische logs bij volgens hun eigen voorwaarden; daar
+                hebben wij geen invloed op. De gegenereerde les, toets of
+                tekst zelf sla je zelf op, in je eigen account, zoals bij
+                elk ander onderdeel van Facula.
               </p>
             </section>
 
@@ -135,14 +139,20 @@ export default function AiPage() {
                 Onze eigen inschatting is dat Facula in de huidige vorm niet
                 kwalificeert als hoog-risico AI-systeem onder Annex III
                 (onderwijs): Facula bepaalt geen toelating tot een
-                onderwijsinstelling, beoordeelt geen leerresultaten, bepaalt
-                geen onderwijsniveau, en monitort geen toetsgedrag. De
-                toets- en lesgenerator maken content aan, ze kijken niets na
-                en koppelen geen cijfer of leerpad aan een leerling. Dit is
-                een eigen inschatting op basis van de wettekst en publiek
-                beschikbare toelichting, geen formele classificatie door een
-                jurist of notified body. Verandert een toekomstige functie
-                dit (bijvoorbeeld automatisch nakijken met een cijferadvies),
+                onderwijsinstelling en monitort geen toetsgedrag. De
+                toets- en lesgenerator maken content aan, ze bepalen zelf
+                geen niveau of leerpad voor een leerling. De nakijkhulp
+                rekent, op basis van de rubric-punten en de cesuur die de
+                docent zelf instelt, een cijfer uit: dat is een
+                deterministische rekenhulp, geen AI. AI komt hier nooit aan
+                te pas en bepaalt dus nergens een cijfer, niveau of advies;
+                AI geeft in de nakijkmodule uitsluitend een
+                formuleringsvoorstel voor de feedbacktekst, dat de docent
+                bewerkt en zelf overneemt of afwijst. Dit is een eigen
+                inschatting op basis van de wettekst en publiek beschikbare
+                toelichting, geen formele classificatie door een jurist of
+                notified body. Verandert een toekomstige functie dit
+                (bijvoorbeeld automatisch nakijken met een AI-cijferadvies),
                 dan hoort deze inschatting opnieuw beoordeeld te worden.
               </p>
             </section>
