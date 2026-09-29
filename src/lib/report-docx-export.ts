@@ -7,6 +7,7 @@ import {
   TextRun,
 } from "docx";
 import type { GeneratedReport, RapportOutputType } from "./types";
+import { AI_MELDING_EXPORT } from "./ai-transparantie";
 import { slugify } from "./pptx-export";
 import type { Logo } from "./huisstijl/logo";
 import { bouwAiVoet, bouwHuisstijlHeader } from "./huisstijl/docx-kop";
@@ -93,6 +94,11 @@ export function bouwRapportDocument(
   const header = bouwHuisstijlHeader(huisstijl, logo);
 
   return new Document({
+    // Machineleesbare markering (AI-verordening art. 50 lid 2) in de
+    // documenteigenschappen, naast de zichtbare voettekst hieronder.
+    description: AI_MELDING_EXPORT,
+    subject: AI_MELDING_EXPORT,
+    creator: "Facula (DGDH OS)",
     sections: [
       {
         properties: {},

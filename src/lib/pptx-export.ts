@@ -53,6 +53,11 @@ export function bouwLesPresentatie(
   pptx.layout = "FACULA_16x9";
   pptx.author = huisstijl.schoolnaam ?? "Facula";
   pptx.title = les.titel;
+  // Machineleesbare markering (AI-verordening art. 50 lid 2), naast de
+  // zichtbare vermelding op de dia's zelf: staat in de documenteigenschappen,
+  // dus blijft aanwezig ook als het bestand losraakt van Facula.
+  pptx.subject = AI_MELDING_EXPORT;
+  pptx.company = "Facula (DGDH OS)";
 
   const logoMaat = logo ? passendeAfmeting(logo, LOGO_MAX_BREEDTE, LOGO_MAX_HOOGTE) : null;
 
