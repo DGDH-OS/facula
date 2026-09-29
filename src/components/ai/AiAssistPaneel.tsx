@@ -42,8 +42,10 @@ export function AiAssistPaneel({
   const [voorstel, setVoorstel] = useState<AssistResponse | null>(null);
   const [bewerkteTekst, setBewerkteTekst] = useState("");
   const meldingId = useId();
+  const redenId = useId();
 
   const geblokkeerd = Boolean(disabledReden) || !tekst.trim();
+  const geblokkeerdReden = disabledReden ?? "Vul eerst tekst in.";
 
   async function vraagVoorstel() {
     setStatus("bezig");
@@ -79,13 +81,21 @@ export function AiAssistPaneel({
       {status !== "klaar" && (
         <Button
           type="button"
-          disabled={geblokkeerd || status === "bezig"}
+          className="aria-disabled:cursor-not-allowed aria-disabled:opacity-70"
           aria-disabled={geblokkeerd || status === "bezig"}
-          title={geblokkeerd ? disabledReden ?? "Vul eerst tekst in." : undefined}
-          onClick={() => void vraagVoorstel()}
+          aria-describedby={geblokkeerd ? redenId : undefined}
+          onClick={() => {
+            if (geblokkeerd || status === "bezig") return;
+            void vraagVoorstel();
+          }}
         >
           {status === "bezig" ? "AI denkt na..." : label}
         </Button>
+      )}
+      {geblokkeerd && status !== "klaar" && (
+        <p id={redenId} className="text-base text-tekst-zacht">
+          {geblokkeerdReden}
+        </p>
       )}
       <p id={meldingId} aria-live="polite" className="text-base text-tekst-zacht">
         {status === "bezig" ? "AI denkt na, dit duurt meestal een paar seconden." : ""}
