@@ -1,4 +1,9 @@
-import { privacyGate, privacyGateUitleg } from "../src/lib/ai/privacy-gate";
+import {
+  privacyGate,
+  privacyGateUitleg,
+  normaliseerTekst,
+  comprimeerVoorDetectie,
+} from "../src/lib/ai/privacy-gate";
 import { assistOutputGuard, assistOutputGuardUitleg } from "../src/lib/ai/output-guard";
 import {
   ASSIST_TAKEN,
@@ -8,6 +13,10 @@ import {
 } from "../src/lib/ai/assist-tasks";
 import { assistProviderBeschikbaar } from "../src/lib/ai/assist-provider";
 import { magDoor } from "../src/lib/ai/rate-limit";
+import { zelfdeOrigin } from "../src/lib/validation";
+import { maakFeedback } from "../src/lib/nakijken/feedback";
+import { nieuwCriterium } from "../src/lib/nakijken/rubric";
+import type { Leerling, Niveau } from "../src/lib/nakijken/types";
 
 // Geen netwerkaanroep in dit bestand: alle geteste functies zijn puur of
 // lezen alleen process.env, en genereerAssistVoorstel() wordt hier bewust
@@ -110,5 +119,105 @@ for (let i = 0; i < 15; i++) {
 }
 if (!geblokkeerdGezien) throw new Error("magDoor blokkeert nooit binnen het venster");
 if (!magDoor(gebruikerB).ok) throw new Error("magDoor laat een andere gebruiker onterecht wachten");
+
+// 7. zelfdeOrigin: CSRF-controle voor POST /api/ai/assist.
+function verzoek(origin: string | null, host: string | null): Request {
+  const headers = new Headers();
+  if (origin) headers.set("origin", origin);
+  if (host) headers.set("host", host);
+  return new Request("https://facula.app/api/ai/assist", { method: "POST", headers });
+}
+if (!zelfdeOrigin(verzoek("https://facula.app", "facula.app")))
+  throw new Error("zelfdeOrigin wijst een gelijke origin/host onterecht af");
+if (zelfdeOrigin(verzoek("https://kwaadaardig.example", "facula.app")))
+  throw new Error("zelfdeOrigin accepteert een andere origin dan de host");
+if (zelfdeOrigin(verzoek(null, "facula.app")))
+  throw new Error("zelfdeOrigin accepteert een ontbrekende origin");
+if (zelfdeOrigin(verzoek("niet-een-url", "facula.app")))
+  throw new Error("zelfdeOrigin accepteert een ongeldige origin-header");
+
+// 8. privacyGate: omzeilingen die BLOCK 2 moet dichten.
+const zeroWidthEmail = privacyGate("Mail​mij​ op jan​@​school.nl vandaag nog.");
+if (zeroWidthEmail.ok) throw new Error("privacyGate mist een e-mailadres met zero-width tekens erin");
+
+const gespeldeEmail = privacyGate("Je kunt mailen naar jan [at] school punt nl voor meer info.");
+if (gespeldeEmail.ok) throw new Error("privacyGate mist een gespelde e-mailobfuscatie (at/punt)");
+
+const nbspTelefoon = privacyGate("Bel 06 12 34 56 78 gerust terug.");
+if (nbspTelefoon.ok) throw new Error("privacyGate mist een telefoonnummer met NBSP tussen de cijfers");
+
+const uitElkaarGetrokkenTerm = privacyGate("De leerling is d y s l e x i e gediagnosticeerd volgens ouders.");
+if (uitElkaarGetrokkenTerm.ok)
+  throw new Error("privacyGate mist een uit elkaar getrokken medische term");
+
+const homoglyfeTerm = privacyGate("Deze leerling heeft АDHD volgens het dossier."); // Cyrillische А
+if (homoglyfeTerm.ok) throw new Error("privacyGate mist een medische term met een Cyrillische homoglyph");
+
+const aanhefMetNaam = privacyGate("Beste Sem, hier is je feedback over het proefwerk van gisteren.");
+if (aanhefMetNaam.ok) throw new Error("privacyGate mist een aanhef gevolgd door een éénnaams-naam");
+
+const ouderAanhef = privacyGate("Geachte heer/mevrouw Jansen, hierbij een update over de klas.");
+if (ouderAanhef.ok) throw new Error("privacyGate mist een formele aanhef met achternaam");
+
+// normaliseerTekst/comprimeerVoorDetectie zijn zelf ook getest, niet alleen via privacyGate.
+if (!normaliseerTekst("jan​@school.nl").includes("@"))
+  throw new Error("normaliseerTekst haalt geen zero-width tekens weg");
+if (normaliseerTekst("a b") !== "a b")
+  throw new Error("normaliseerTekst zet een NBSP niet om naar een gewone spatie");
+if (comprimeerVoorDetectie("d y s l e x i e") !== "dyslexie")
+  throw new Error("comprimeerVoorDetectie voegt uit elkaar getrokken letters niet samen");
+
+// 9. output-guard: nieuwe categorieën die BLOCK 3 moet dichten.
+const invoerZonderNiveau = "De leerling werkte netjes door tijdens de toets.";
+
+const outputMetNiveau = "De leerling werkte netjes door en zit duidelijk op havo-niveau.";
+if (assistOutputGuard(invoerZonderNiveau, outputMetNiveau).ok)
+  throw new Error("output-guard mist een verzonnen schoolniveau (havo)");
+
+const outputMetOordeel = "De leerling werkte netjes door, het resultaat is gewoon slecht.";
+if (assistOutputGuard(invoerZonderNiveau, outputMetOordeel).ok)
+  throw new Error("output-guard mist een verzonnen oordeelwoord (slecht)");
+
+const outputMetGetalWoord = "De leerling verdient een zes voor deze inzet.";
+if (assistOutputGuard(invoerZonderNiveau, outputMetGetalWoord).ok)
+  throw new Error("output-guard mist een cijfer dat als woord geschreven is (zes)");
+
+const outputMetPercentage = "De leerling scoorde 80% op de toets.";
+if (assistOutputGuard(invoerZonderNiveau, outputMetPercentage).ok)
+  throw new Error("output-guard mist een percentage dat niet in de invoer stond");
+
+const outputMetBreuk = "De leerling haalde 7/10 op de opdracht.";
+if (assistOutputGuard(invoerZonderNiveau, outputMetBreuk).ok)
+  throw new Error("output-guard mist een breuk-score die niet in de invoer stond");
+
+const outputMetPunten = "De leerling haalde 18 punten voor het werkstuk.";
+if (assistOutputGuard(invoerZonderNiveau, outputMetPunten).ok)
+  throw new Error("output-guard mist een puntenscore die niet in de invoer stond");
+
+const outputMetDiagnose = "De leerling reageerde rustig, past bij het adhd-profiel.";
+if (assistOutputGuard(invoerZonderNiveau, outputMetDiagnose).ok)
+  throw new Error("output-guard mist een verzonnen diagnose-term (adhd)");
+
+// "goed"/"sterk" mogen alleen blokkeren als ze niet al in de invoer stonden.
+const invoerMetGoed = "De leerling deed het goed vandaag en hielp een klasgenoot.";
+const outputZelfdeGoed = "De leerling deed het goed vandaag en was behulpzaam.";
+if (!assistOutputGuard(invoerMetGoed, outputZelfdeGoed).ok)
+  throw new Error("output-guard blokkeert onterecht 'goed' dat al in de eigen invoer stond");
+
+// 10. nakijken-feedback bevat nooit een cijfer of losse punten: alleen
+// initialen en kwalitatieve rubric-zinnen gaan naar de AI-assistlaag.
+const criterium = nieuwCriterium("Inhoud");
+const rubricVoorFeedback = { titel: "Betoog", criteria: [criterium], maxPunten: 8, cesuur: 55 };
+const leerlingVoorFeedback: Leerling = {
+  id: "1",
+  initialen: "L.J.",
+  keuzes: { [criterium.id]: 2 as Niveau },
+  notitie: "werkte rustig door",
+};
+const feedbackVoorAi = maakFeedback(rubricVoorFeedback, leerlingVoorFeedback);
+if (/\d/.test(feedbackVoorAi))
+  throw new Error("maakFeedback bevat een cijfer; dat mag nooit naar de AI-assistlaag gaan");
+if (/\bpunten\b/i.test(feedbackVoorAi))
+  throw new Error("maakFeedback noemt punten; dat mag nooit naar de AI-assistlaag gaan");
 
 console.log("ai-tests: ok");
