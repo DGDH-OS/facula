@@ -9,7 +9,13 @@
  * Bewust regel-gebaseerd en niet een AI-classifier, zelfde reden als
  * avg-guardrails.ts: een blokkade moet uitlegbaar en getest zijn, niet zelf
  * weer een modelbeslissing.
+ *
+ * Voornamen: exacte tokens na normalisatie tegen een vaste lijst veelvoorkomende
+ * Nederlandse voornamen. Dat is geen leerlingenbestand. Een zeldzame naam kan
+ * erdoorheen; initialen zoals L.J. blijven toegestaan.
  */
+
+import { NEDERLANDSE_VOORNAMEN } from "./nederlandse-voornamen";
 
 export interface PrivacyGateResultaat {
   ok: boolean;
@@ -113,8 +119,15 @@ const REDEN_LABELS: Record<string, string> = {
   medisch: "medische of diagnose-termen",
   contact: "een e-mailadres of telefoonnummer",
   bsn: "een BSN-achtig nummer",
-  naam: "een volledige naam of een aanhef met een naam erin",
+  naam: "een voornaam uit de vaste namenlijst, een volledige naam of een aanhef met een naam erin",
 };
+
+function heeftBekendeVoornaam(tekst: string): boolean {
+  for (const token of tekst.toLowerCase().split(/[^\p{L}]+/u)) {
+    if (token && NEDERLANDSE_VOORNAMEN.has(token)) return true;
+  }
+  return false;
+}
 
 /**
  * Controleert tekst die naar het model zou gaan. `ok: false` betekent: niets
@@ -142,7 +155,12 @@ export function privacyGate(tekst: string): PrivacyGateResultaat {
   if (BSN_ACHTIG.test(genormaliseerd) || BSN_ACHTIG.test(gecomprimeerd)) {
     gevonden.add(REDEN_LABELS.bsn);
   }
-  if (VOLLEDIGE_NAAM.test(genormaliseerd) || AANHEF_MET_NAAM.test(genormaliseerd)) {
+  if (
+    VOLLEDIGE_NAAM.test(genormaliseerd) ||
+    AANHEF_MET_NAAM.test(genormaliseerd) ||
+    heeftBekendeVoornaam(genormaliseerd) ||
+    heeftBekendeVoornaam(gecomprimeerd)
+  ) {
     gevonden.add(REDEN_LABELS.naam);
   }
   return { ok: gevonden.size === 0, redenen: Array.from(gevonden), genormaliseerd };
@@ -154,6 +172,7 @@ export function privacyGateUitleg(redenen: string[]): string {
     "Deze tekst gaat niet naar de AI, want er staat mogelijk " +
     redenen.join(" en ") +
     " in. Haal dit eruit en probeer het opnieuw. De filter vangt herkenbare " +
-    "persoonsgegevens; zet zelf geen namen of gevoelige informatie in de tekst."
+    "contactgegevens, medische termen en veelvoorkomende voornamen uit een vaste " +
+    "lijst. Zeldzame namen kunnen erdoorheen. Zet zelf geen namen in de tekst."
   );
 }

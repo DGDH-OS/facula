@@ -2,6 +2,7 @@ import { useState } from "react";
 import { isoWeekLabel, isoWeekSleutel, type KlasWeekAnalyse } from "@/lib/toetsweek/planner";
 import type { ToetsweekSignaal } from "@/lib/toetsweek/planner";
 import { AiAssistPaneel } from "@/components/ai/AiAssistPaneel";
+import { vervangVoornamen } from "@/lib/ai/assist-payload";
 import { AiMelding } from "@/components/ui/AiMelding";
 
 const STATUS_LABEL: Record<KlasWeekAnalyse["status"], string> = {
@@ -138,7 +139,7 @@ export function OverzichtTab({
               <AiAssistPaneel
                 taak="toetsweek_tips"
                 label="Vraag AI om spreidingstips"
-                tekst={samenvatting}
+                tekst={vervangVoornamen(samenvatting)}
                 disabledReden={privacyGeblokkeerd ? "Los eerst de privacyblokkade op." : null}
                 onGebruik={(voorstel) => setAiTips(voorstel)}
               />

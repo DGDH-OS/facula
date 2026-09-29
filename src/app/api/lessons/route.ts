@@ -4,8 +4,9 @@ import { genereerLesMetAi } from "@/lib/ai/generate-lesson";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { quotaBoodschap, saveWithQuota } from "@/lib/quota";
 import { haalVerbruik } from "@/lib/school";
-import { clampInt, limitString, readBodyWithLimit } from "@/lib/validation";
+import { clampInt, limitString, readBodyWithLimit, zelfdeOrigin } from "@/lib/validation";
 import { privacyGate, privacyGateUitleg } from "@/lib/ai/privacy-gate";
+import { LESSEN_MAX_PER_MINUUT, magDoor } from "@/lib/ai/rate-limit";
 
 /**
  * Een AI-les kost ongeveer 22 seconden, en bij een terugval op het tweede
@@ -36,6 +37,10 @@ function isNiveau(v: unknown): v is Niveau {
  * body — een client kan dus nooit voor iemand anders opslaan.
  */
 export async function POST(request: NextRequest) {
+  if (!zelfdeOrigin(request)) {
+    return NextResponse.json({ error: "Ongeldig verzoek." }, { status: 403 });
+  }
+
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
@@ -43,6 +48,17 @@ export async function POST(request: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: "Niet ingelogd." }, { status: 401 });
+  }
+
+  const rateLimit = magDoor(user.id, {
+    maxPerVenster: LESSEN_MAX_PER_MINUUT,
+    sleutel: "lessons",
+  });
+  if (!rateLimit.ok) {
+    return NextResponse.json(
+      { error: "Te veel lesverzoeken kort na elkaar. Probeer het over een minuut opnieuw." },
+      { status: 429 },
+    );
   }
 
   const bodyResult = await readBodyWithLimit(request);

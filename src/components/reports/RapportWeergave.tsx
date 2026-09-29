@@ -8,6 +8,7 @@ import { useHuisstijl, useLogoKeuze } from "@/lib/huisstijl/client";
 import { HuisstijlSchakelaars } from "@/components/huisstijl/HuisstijlSchakelaars";
 import { AiMelding } from "@/components/ui/AiMelding";
 import { AiAssistPaneel } from "@/components/ai/AiAssistPaneel";
+import { vervangVoornamen } from "@/lib/ai/assist-payload";
 import { Button } from "@/components/ui/Button";
 import { ErrorNotice } from "@/components/ui/Notice";
 import { controleerRapportKwaliteit } from "@/lib/report-quality";
@@ -166,7 +167,7 @@ export function RapportWeergave({
         <AiAssistPaneel
           taak="rapport_herformuleer"
           label="Herformuleer met AI"
-          tekst={vervangLeerling(tekst)}
+          tekst={vervangVoornamen(vervangLeerling(tekst))}
           onGebruik={(voorstel) => setTekst(herstelLeerling(voorstel))}
         />
       </article>

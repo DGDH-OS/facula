@@ -2,6 +2,7 @@
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { AiMelding } from "@/components/ui/AiMelding";
+import { bouwAssistBody } from "@/lib/ai/assist-payload";
 import type { AssistTaak } from "@/lib/ai/assist-tasks";
 
 interface AssistResponse {
@@ -17,8 +18,8 @@ interface AssistResponse {
  * naar origineel". Nooit automatisch overnemen.
  *
  * `disabledReden` komt van de bestaande privacyblokkade in de UI (bijv.
- * privacyOuders(...).blokkeer): zolang die blokkeert, blijft deze knop ook
- * uitgeschakeld, met uitleg via aria-disabled.
+ * privacyOuders(...).blokkeer): zolang die blokkeert, blijft deze knop
+ * native disabled, met de reden zichtbaar en via aria-describedby.
  */
 export function AiAssistPaneel({
   taak,
@@ -55,7 +56,7 @@ export function AiAssistPaneel({
       const response = await fetch("/api/ai/assist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taak, onderwerp, tekst, toon }),
+        body: JSON.stringify(bouwAssistBody({ taak, onderwerp, tekst, toon })),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
@@ -81,13 +82,10 @@ export function AiAssistPaneel({
       {status !== "klaar" && (
         <Button
           type="button"
-          className="aria-disabled:cursor-not-allowed aria-disabled:opacity-70"
-          aria-disabled={geblokkeerd || status === "bezig"}
+          className="disabled:cursor-not-allowed disabled:opacity-70"
+          disabled={geblokkeerd || status === "bezig"}
           aria-describedby={geblokkeerd ? redenId : undefined}
-          onClick={() => {
-            if (geblokkeerd || status === "bezig") return;
-            void vraagVoorstel();
-          }}
+          onClick={() => void vraagVoorstel()}
         >
           {status === "bezig" ? "AI denkt na..." : label}
         </Button>

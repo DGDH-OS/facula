@@ -6,6 +6,7 @@ import { Field, VELD_KLASSEN } from "@/components/ui/Field";
 import { berekenCijfer, valideerInitialen } from "@/lib/nakijken/rubric";
 import { maakFeedback, totaalPunten } from "@/lib/nakijken/feedback";
 import { AiAssistPaneel } from "@/components/ai/AiAssistPaneel";
+import { vervangVoornamen } from "@/lib/ai/assist-payload";
 import type { Leerling, Niveau, Rubric } from "@/lib/nakijken";
 
 export function LeerlingBeoordeling({
@@ -181,7 +182,7 @@ export function LeerlingBeoordeling({
           <AiAssistPaneel
             taak="nakijk_feedback_verbeter"
             label="Verbeter feedback met AI"
-            tekst={maakFeedback(rubric, leerling)}
+            tekst={vervangVoornamen(maakFeedback(rubric, leerling))}
             onGebruik={(voorstel) =>
               setAiOverrides((current) => ({ ...current, [leerling.id]: voorstel }))
             }

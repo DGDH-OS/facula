@@ -69,9 +69,12 @@ export default function AiPage() {
                 &quot;Verbeter met AI&quot; wilt laten herformuleren. Vóór
                 verzending controleert Facula die tekst op e-mailadressen,
                 telefoonnummers, BSN-achtige nummers, medische of
-                diagnose-termen en volledige namen. Staat een van die dingen
-                erin, dan gaat er niets naar het model en zie je een uitleg
-                welk deel je moet aanpassen.
+                diagnose-termen, volledige namen en veelvoorkomende
+                Nederlandse voornamen als los woord. Die voornamen komen uit
+                een vaste lijst, geen leerlingenbestand: een zeldzame naam
+                kan erdoorheen. Staat een van die dingen erin, dan gaat er
+                niets naar het model en zie je een uitleg welk deel je moet
+                aanpassen.
               </p>
               <p className="mt-2 text-base leading-relaxed text-tekst">
                 Facula bewaart geen aparte kopie van wat naar het model
@@ -130,10 +133,10 @@ export default function AiPage() {
               <p className="mt-2 text-base leading-relaxed text-tekst">
                 De AI-verordening (Verordening (EU) 2024/1689) vraagt in
                 artikel 50 dat wie AI-gegenereerde inhoud onder ogen krijgt,
-                dat kan weten. Elk resultaat draagt daarom op het scherm en
-                in het gedownloade bestand de vermelding dat het met AI is
-                gemaakt, en waar technisch mogelijk staat dat ook in de
-                documenteigenschappen van het bestand zelf.
+                dat kan weten. Die markering geldt alleen voor het AI-voorstel
+                in de assistlaag, niet voor elke andere tekst op het scherm.
+                Een les of toets die Facula met AI maakt, heeft een eigen
+                vermelding bij dat resultaat en in het gedownloade bestand.
               </p>
               <p className="mt-2 text-base leading-relaxed text-tekst">
                 Onze eigen inschatting is dat Facula in de huidige vorm niet

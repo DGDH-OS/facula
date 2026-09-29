@@ -1,5 +1,7 @@
 /**
- * Eenvoudige in-memory rate-limit per gebruiker voor POST /api/ai/assist.
+ * Eenvoudige in-memory rate-limit per gebruiker per emmer.
+ *
+ * Assist: 10/min. Lessen: 5/min, vóór de modelaanroep.
  *
  * Beperking, bewust gedocumenteerd: dit geheugen is per functie-instantie.
  * Op Vercel (Fluid Compute) kunnen meerdere instanties tegelijk draaien, en
@@ -11,7 +13,8 @@
  */
 
 const VENSTER_MS = 60_000;
-const MAX_PER_VENSTER = 10;
+export const ASSIST_MAX_PER_MINUUT = 10;
+export const LESSEN_MAX_PER_MINUUT = 5;
 
 const tellers = new Map<string, { aantal: number; vensterStart: number }>();
 
@@ -20,14 +23,19 @@ export interface RateLimitResultaat {
   overMs: number;
 }
 
-export function magDoor(userId: string): RateLimitResultaat {
+export function magDoor(
+  userId: string,
+  opties?: { maxPerVenster?: number; sleutel?: string },
+): RateLimitResultaat {
+  const max = opties?.maxPerVenster ?? ASSIST_MAX_PER_MINUUT;
+  const id = `${opties?.sleutel ?? "assist"}:${userId}`;
   const nu = Date.now();
-  const bestaand = tellers.get(userId);
+  const bestaand = tellers.get(id);
   if (!bestaand || nu - bestaand.vensterStart >= VENSTER_MS) {
-    tellers.set(userId, { aantal: 1, vensterStart: nu });
+    tellers.set(id, { aantal: 1, vensterStart: nu });
     return { ok: true, overMs: 0 };
   }
-  if (bestaand.aantal >= MAX_PER_VENSTER) {
+  if (bestaand.aantal >= max) {
     return { ok: false, overMs: VENSTER_MS - (nu - bestaand.vensterStart) };
   }
   bestaand.aantal++;

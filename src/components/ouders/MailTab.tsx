@@ -5,6 +5,7 @@ import { maakOudermail, type MailInput } from "@/lib/ouders/mail";
 import { privacyOuders } from "@/lib/ouders/privacy";
 import { AANLEIDINGEN } from "@/lib/ouders/templates";
 import { AiAssistPaneel } from "@/components/ai/AiAssistPaneel";
+import { vervangVoornamen } from "@/lib/ai/assist-payload";
 import { Veld, inputClass } from "./Veld";
 import { OuderOutput } from "./OuderOutput";
 export function MailTab({
@@ -153,8 +154,8 @@ export function MailTab({
         <AiAssistPaneel
           taak="ouder_mail_verbeter"
           label="Verbeter met AI"
-          onderwerp={vervangLeerling(gegenereerd.subject)}
-          tekst={vervangLeerling(gegenereerd.body)}
+          onderwerp={vervangVoornamen(vervangLeerling(gegenereerd.subject))}
+          tekst={vervangVoornamen(vervangLeerling(gegenereerd.body))}
           toon={`toon: ${mail.toon}`}
           disabledReden={privacy.blokkeer ? "Los eerst de privacyblokkade op." : null}
           onGebruik={(voorstel, aiOnderwerp) =>

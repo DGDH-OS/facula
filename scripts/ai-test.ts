@@ -12,11 +12,13 @@ import {
   type AssistTaak,
 } from "../src/lib/ai/assist-tasks";
 import { assistProviderBeschikbaar } from "../src/lib/ai/assist-provider";
-import { magDoor } from "../src/lib/ai/rate-limit";
+import { magDoor, LESSEN_MAX_PER_MINUUT } from "../src/lib/ai/rate-limit";
 import { zelfdeOrigin } from "../src/lib/validation";
 import { maakFeedback } from "../src/lib/nakijken/feedback";
 import { nieuwCriterium } from "../src/lib/nakijken/rubric";
 import type { Leerling, Niveau } from "../src/lib/nakijken/types";
+import { bouwAssistBody } from "../src/lib/ai/assist-payload";
+import { readFileSync } from "node:fs";
 
 // Geen netwerkaanroep in dit bestand: alle geteste functies zijn puur of
 // lezen alleen process.env, en genereerAssistVoorstel() wordt hier bewust
@@ -49,6 +51,20 @@ if (schoonCheck.redenen.length !== 0) throw new Error("privacyGate geeft redenen
 // Initialen mogen niet als volledige naam worden gezien.
 const initialenCheck = privacyGate("L.J. deed goed mee tijdens de les.");
 if (!initialenCheck.ok) throw new Error("privacyGate blokkeert onterecht op initialen");
+
+for (const naam of ["Sanne", "Sem", "Ruben", "Mohamed"]) {
+  const check = privacyGate(`${naam} is ziek.`);
+  if (check.ok) throw new Error(`privacyGate laat voornaam ${naam} door`);
+  const body = bouwAssistBody({
+    taak: "ouder_mail_verbeter",
+    tekst: `${naam} is ziek.`,
+    onderwerp: `Update over ${naam}`,
+  });
+  const payload = JSON.stringify(body);
+  if (new RegExp(naam, "i").test(payload)) {
+    throw new Error(`bekende naam ${naam} zit in assist payload`);
+  }
+}
 
 // 3. output-guard weigert een verzonnen cijfer/oordeel dat niet in de invoer stond.
 const invoerZonderCijfer = "De leerling werkte rustig door en stelde een goede vraag.";
@@ -120,6 +136,19 @@ for (let i = 0; i < 15; i++) {
 if (!geblokkeerdGezien) throw new Error("magDoor blokkeert nooit binnen het venster");
 if (!magDoor(gebruikerB).ok) throw new Error("magDoor laat een andere gebruiker onterecht wachten");
 
+const lesUser = `test-lessen-${Date.now()}`;
+for (let i = 0; i < LESSEN_MAX_PER_MINUUT; i++) {
+  if (!magDoor(lesUser, { maxPerVenster: LESSEN_MAX_PER_MINUUT, sleutel: "lessons" }).ok) {
+    throw new Error("lessen-limiet blokkeert te vroeg");
+  }
+}
+if (magDoor(lesUser, { maxPerVenster: LESSEN_MAX_PER_MINUUT, sleutel: "lessons" }).ok) {
+  throw new Error("lessen-limiet van 5 per minuut blokkeert niet");
+}
+if (!magDoor(lesUser).ok) {
+  throw new Error("assist-emmer mag niet dezelfde teller als lessen delen");
+}
+
 // 7. zelfdeOrigin: CSRF-controle voor POST /api/ai/assist.
 function verzoek(origin: string | null, host: string | null): Request {
   const headers = new Headers();
@@ -135,6 +164,39 @@ if (zelfdeOrigin(verzoek(null, "facula.app")))
   throw new Error("zelfdeOrigin accepteert een ontbrekende origin");
 if (zelfdeOrigin(verzoek("niet-een-url", "facula.app")))
   throw new Error("zelfdeOrigin accepteert een ongeldige origin-header");
+
+const lessonsBron = readFileSync("src/app/api/lessons/route.ts", "utf8");
+const lessonsPost = lessonsBron.slice(lessonsBron.indexOf("export async function POST"));
+const lessonsEersteCheck =
+  /^export async function POST\(request: NextRequest\) \{\s*if \(!zelfdeOrigin\(request\)\)/;
+if (!lessonsEersteCheck.test(lessonsPost)) {
+  throw new Error("lessons-route mist Origin-check als eerste stap");
+}
+if (!lessonsBron.includes("LESSEN_MAX_PER_MINUUT") || !lessonsBron.includes('sleutel: "lessons"')) {
+  throw new Error("lessons-route mist per-user rate-limit vóór de modelaanroep");
+}
+
+const paneelBron = readFileSync("src/components/ai/AiAssistPaneel.tsx", "utf8");
+if (paneelBron.includes("aria-disabled")) {
+  throw new Error("AiAssistPaneel gebruikt nog aria-disabled");
+}
+if (!paneelBron.includes("disabled={geblokkeerd || status === \"bezig\"}")) {
+  throw new Error("AiAssistPaneel mist native disabled");
+}
+if (!paneelBron.includes("aria-describedby={geblokkeerd ? redenId : undefined}")) {
+  throw new Error("AiAssistPaneel mist aria-describedby op de reden");
+}
+if (!paneelBron.includes("bouwAssistBody")) {
+  throw new Error("AiAssistPaneel stuurt tekst zonder voornamen-vervanging");
+}
+
+const aiPagina = readFileSync("src/app/ai/page.tsx", "utf8");
+if (!aiPagina.includes("alleen voor het AI-voorstel")) {
+  throw new Error("/ai zegt niet dat AI-markering alleen voor assist-voorstellen geldt");
+}
+if (aiPagina.includes("Elk resultaat draagt daarom")) {
+  throw new Error("/ai markeert nog elke output als AI");
+}
 
 // 8. privacyGate: omzeilingen die BLOCK 2 moet dichten.
 const zeroWidthEmail = privacyGate("Mail​mij​ op jan​@​school.nl vandaag nog.");
@@ -193,6 +255,23 @@ if (assistOutputGuard(invoerZonderNiveau, outputMetBreuk).ok)
 const outputMetPunten = "De leerling haalde 18 punten voor het werkstuk.";
 if (assistOutputGuard(invoerZonderNiveau, outputMetPunten).ok)
   throw new Error("output-guard mist een puntenscore die niet in de invoer stond");
+
+if (assistOutputGuard(invoerZonderNiveau, "De leerling scoorde 12.").ok)
+  throw new Error("output-guard laat 12 door");
+if (assistOutputGuard(invoerZonderNiveau, "Eindcijfer 42").ok)
+  throw new Error("output-guard laat 42 door");
+if (assistOutputGuard(invoerZonderNiveau, "Score 100").ok)
+  throw new Error("output-guard laat 100 door");
+if (assistOutputGuard(invoerZonderNiveau, "Cijfer 12,5").ok)
+  throw new Error("output-guard laat 12,5 door");
+if (assistOutputGuard(invoerZonderNiveau, "Score ١٢").ok)
+  throw new Error("output-guard laat unicode-cijfers door");
+if (assistOutputGuard(invoerZonderNiveau, "Dat is honderd procent inzet.").ok)
+  throw new Error("output-guard laat honderd of procent door");
+if (assistOutputGuard(invoerZonderNiveau, "Dat is nul extra.").ok)
+  throw new Error("output-guard laat nul door");
+if (!assistOutputGuard("Score 12,5 in de toets", "De leerling had 12,5 in de toets.").ok)
+  throw new Error("output-guard blokkeert 12,5 die al in de invoer stond");
 
 const outputMetDiagnose = "De leerling reageerde rustig, past bij het adhd-profiel.";
 if (assistOutputGuard(invoerZonderNiveau, outputMetDiagnose).ok)

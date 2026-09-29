@@ -45,17 +45,29 @@ const OORDEELWOORDEN = [
   "excellent", "insufficient", "pass", "fail",
 ];
 
-/** Losse getal-woorden "een" t/m "tien"; als los woord, niet als deel van een ander woord. */
-const GETAL_WOORDEN = [
-  "een", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen", "tien",
-];
-const GETAL_WOORD_REGEX = new RegExp(
-  "\\b(?:" + GETAL_WOORDEN.join("|") + ")\\b(?:\\s+komma\\s+\\b(?:" + GETAL_WOORDEN.join("|") + ")\\b)?",
-  "gi"
-);
-
-/** "7/10", "18 punten", "80%". */
-const BREUK_OF_PUNTEN_REGEX = /\b\d+\s*\/\s*\d+\b|\b\d+\s*%|\b\d+([.,]\d+)?\s+punten\b/gi;
+/** Getalwoorden nul t/m honderd, plus "zero" en "één". */
+function bouwGetalwoorden(): string[] {
+  const eenheden = ["", "een", "twee", "drie", "vier", "vijf", "zes", "zeven", "acht", "negen"];
+  const tienTotTwintig = [
+    "tien", "elf", "twaalf", "dertien", "veertien",
+    "vijftien", "zestien", "zeventien", "achttien", "negentien",
+  ];
+  const tienen = [
+    "", "", "twintig", "dertig", "veertig", "vijftig", "zestig", "zeventig", "tachtig", "negentig",
+  ];
+  const woorden = new Set<string>(["nul", "zero", "één", "honderd", ...eenheden.slice(1), ...tienTotTwintig]);
+  for (let t = 2; t <= 9; t++) {
+    woorden.add(tienen[t]);
+    for (let e = 1; e <= 9; e++) {
+      const stam = eenheden[e];
+      woorden.add(stam + "en" + tienen[t]);
+      if (stam.endsWith("e")) woorden.add(stam + "ën" + tienen[t]);
+    }
+  }
+  return Array.from(woorden);
+}
+const GETAL_WOORDEN = bouwGetalwoorden();
+const UNICODE_BREUK = /[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]/g;
 
 /** Arabische-Indische en Extended Arabische-Indische cijfers naar ASCII, vóór elke cijfercontrole. */
 const UNICODE_CIJFERS: Record<string, string> = {
@@ -69,7 +81,33 @@ const UNICODE_CIJFER_REGEX = new RegExp(Object.keys(UNICODE_CIJFERS).join("|"), 
 function normaliseerVoorOutputCheck(tekst: string): string {
   return normaliseerTekst(tekst)
     .replace(UNICODE_CIJFER_REGEX, (cijfer) => UNICODE_CIJFERS[cijfer] ?? cijfer)
+    .replace(/(\d),(\d)/g, "$1.$2")
     .toLowerCase();
+}
+
+function canonToken(waarde: string): string {
+  return waarde.replace(/\s+/g, "").replace(/(\d),(\d)/g, "$1.$2").toLowerCase();
+}
+
+function numeriekeTokens(tekst: string): Set<string> {
+  const set = new Set<string>();
+  for (const match of tekst.matchAll(/\b\d+\s*\/\s*\d+\b/g)) set.add(canonToken(match[0]));
+  for (const match of tekst.matchAll(/\b\d+(?:[.,]\d+)?\s*%/g)) {
+    set.add(canonToken(match[0]));
+    set.add("procent");
+  }
+  if (/\bprocent\b/.test(tekst)) set.add("procent");
+  for (const match of tekst.matchAll(/\b\d+(?:[.,]\d+)?\s+punten\b/g)) {
+    set.add(canonToken(match[0]));
+    set.add("punten");
+  }
+  if (/\bpunten\b/.test(tekst)) set.add("punten");
+  for (const match of tekst.matchAll(/\b\d+(?:[.,]\d+)?\b/g)) set.add(canonToken(match[0]));
+  for (const match of tekst.matchAll(UNICODE_BREUK)) set.add(match[0]);
+  for (const woord of GETAL_WOORDEN) {
+    if (new RegExp("\\b" + woord + "\\b", "i").test(tekst)) set.add(woord);
+  }
+  return set;
 }
 
 /**
@@ -88,16 +126,9 @@ function nieuweTermenInOutput(invoerLower: string, outputLower: string): string[
     }
   }
 
-  for (const match of outputLower.match(GETAL_WOORD_REGEX) ?? []) {
-    if (!new RegExp("\\b" + match.trim().replace(/\s+/g, "\\s+") + "\\b", "i").test(invoerLower)) {
-      gevonden.push(match.trim());
-    }
-  }
-
-  for (const match of outputLower.match(BREUK_OF_PUNTEN_REGEX) ?? []) {
-    if (!invoerLower.includes(match)) {
-      gevonden.push(match.trim());
-    }
+  const invoerNummers = numeriekeTokens(invoerLower);
+  for (const token of numeriekeTokens(outputLower)) {
+    if (!invoerNummers.has(token)) gevonden.push(token);
   }
 
   return Array.from(new Set(gevonden));
