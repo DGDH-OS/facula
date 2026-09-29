@@ -74,6 +74,29 @@ export default function VoorwaardenPage() {
 
             <section>
               <h2 className="font-display text-xl text-marine">
+                3a. AI-gegenereerde en AI-ondersteunde inhoud
+              </h2>
+              <p className="mt-2 text-base leading-relaxed text-tekst">
+                Facula gebruikt AI om lesmateriaal, toetsen, rapportteksten en
+                AI-suggesties (zoals &quot;Verbeter met AI&quot;) te
+                genereren. AI-output is altijd een voorstel: jij blijft
+                verantwoordelijk voor het controleren, aanpassen en
+                goedkeuren van wat je in de klas of richting ouders gebruikt.
+                Gegenereerde content draagt een zichtbare AI-vermelding en,
+                waar technisch mogelijk, een markering in de
+                documenteigenschappen. Lees meer op{" "}
+                <Link
+                  href="/ai"
+                  className="font-semibold text-marine underline underline-offset-4"
+                >
+                  onze AI-pagina
+                </Link>
+                .
+              </p>
+            </section>
+
+            <section>
+              <h2 className="font-display text-xl text-marine">
                 4. Intellectueel eigendom
               </h2>
               <p className="mt-2 text-base leading-relaxed text-tekst">

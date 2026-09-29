@@ -158,6 +158,17 @@ export default function ScholenPage() {
                 </div>
               ))}
             </div>
+            <p className="mt-8 max-w-[62ch] text-base text-tekst">
+              Meer over hoe Facula AI inzet, wat er wel en niet naar het model
+              gaat, en de AI-verordening:{" "}
+              <a
+                href="/ai"
+                className="font-semibold text-marine underline underline-offset-4"
+              >
+                AI in Facula
+              </a>
+              .
+            </p>
           </div>
         </section>
 

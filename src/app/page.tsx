@@ -311,6 +311,26 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Vertrouwen: kort blok, het volledige verhaal staat op /ai. */}
+        <section className="border-t-2 border-lijn px-6 py-16">
+          <div className="mx-auto max-w-4xl text-center">
+            <h2 className="font-display text-2xl text-marine">
+              AI die eerlijk zegt wat hij doet
+            </h2>
+            <p className="mx-auto mt-3 max-w-[62ch] text-base text-tekst">
+              Facula gebruikt AI (Google Vertex AI, EU-endpoint) om lesmateriaal,
+              toetsen en rapportteksten te genereren, met een privacy-poort
+              vóór elke aanvraag en jou als eindverantwoordelijke. Geen cijfer
+              of oordeel komt ooit van het model zelf.
+            </p>
+            <div className="mt-6">
+              <ButtonLink href="/ai" variant="secondary">
+                Lees hoe AI in Facula werkt
+              </ButtonLink>
+            </div>
+          </div>
+        </section>
+
         {/* Pricing */}
         <section id="pricing" className="border-t-2 border-lijn px-6 py-24">
           <div className="mx-auto max-w-6xl">
