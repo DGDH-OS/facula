@@ -127,12 +127,44 @@ export default function PrivacyPage() {
                   • <strong>Stripe</strong>: zodra betalen live gaat, voor
                   het afhandelen van abonnementsbetalingen.
                 </li>
+                <li>
+                  • <strong>Google Vertex AI</strong>: voor het genereren van
+                  lesmateriaal, toetsen, rapportteksten en AI-suggesties, via
+                  een Europees endpoint (regio europe-west4, EU). Zie hieronder.
+                </li>
               </ul>
+            </section>
+
+            <section>
+              <h2 className="font-display text-xl text-marine">
+                Hoe Facula lesmateriaal, toetsen en rapportteksten genereert
+              </h2>
               <p className="mt-2 text-base leading-relaxed text-tekst">
-                Facula gebruikt geen externe AI-diensten. Lessen, toetsen en
-                rapportteksten worden gegenereerd door software die op onze
-                eigen servers draait, dus je invoer wordt niet naar een
-                extern AI-bedrijf gestuurd.
+                Facula gebruikt voor het genereren en verbeteren van
+                lesmateriaal, toetsen en rapportteksten de AI-dienst Google
+                Vertex AI (Gemini-model). Deze verwerking vindt plaats via een
+                Europees endpoint (regio europe-west4, EU), niet buiten de EU.
+                Volgens de voorwaarden van Google Cloud gebruikt Google de
+                gegevens die via deze dienst verwerkt worden niet om zijn eigen
+                AI-modellen te trainen.
+              </p>
+              <p className="mt-2 text-base leading-relaxed text-tekst">
+                De tekst of het onderwerp dat je invoert (bijvoorbeeld een
+                leerdoel, of in de rapport-module een aantekening over een
+                leerling) wordt naar deze dienst gestuurd om de gevraagde
+                content te genereren, en komt daarna terug in Facula waar het
+                wordt opgeslagen in je eigen account. Facula bewaart zelf geen
+                kopie van wat naar het model gestuurd wordt, los van de
+                gegenereerde les, toets of tekst die je opslaat. Google Vertex
+                AI is voor deze verwerking een subverwerker van DGDH OS. Lees
+                meer over hoe we dit veilig houden op{" "}
+                <Link
+                  href="/ai"
+                  className="font-semibold text-marine underline underline-offset-4"
+                >
+                  onze AI-pagina
+                </Link>
+                .
               </p>
             </section>
 
