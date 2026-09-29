@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { readBodyWithLimit, limitString } from "@/lib/validation";
+import { readBodyWithLimit, limitString, zelfdeOrigin } from "@/lib/validation";
 import {
   ASSIST_TAKEN,
   MAX_ASSIST_VELD_LENGTE,
   isAssistTaak,
   systeeminstructieVoor,
 } from "@/lib/ai/assist-tasks";
-import { privacyGate, privacyGateUitleg } from "@/lib/ai/privacy-gate";
+import { normaliseerTekst, privacyGate, privacyGateUitleg } from "@/lib/ai/privacy-gate";
 import { assistOutputGuard, assistOutputGuardUitleg } from "@/lib/ai/output-guard";
 import { assistProviderBeschikbaar, genereerAssistVoorstel } from "@/lib/ai/assist-provider";
 import { magDoor } from "@/lib/ai/rate-limit";
+import { zonderKastlijntje } from "@/lib/ai/sanitize";
 
 /** Korte herformuleringstaken: ruim binnen de standaard Vercel-timeout. */
 export const maxDuration = 30;
@@ -43,6 +44,10 @@ function bouwPrompt(velden: { onderwerp: string | null; tekst: string; toon: str
  * opslag of inhoudelijke logging van invoer of uitvoer.
  */
 export async function POST(request: NextRequest) {
+  if (!zelfdeOrigin(request)) {
+    return NextResponse.json({ error: "Ongeldig verzoek." }, { status: 403 });
+  }
+
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
@@ -87,10 +92,18 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  const onderwerp = limitString(body.onderwerp, MAX_ASSIST_VELD_LENGTE);
-  const toon = limitString(body.toon, 200);
+  const onderwerpRuw = limitString(body.onderwerp, MAX_ASSIST_VELD_LENGTE);
+  const toonRuw = limitString(body.toon, 200);
 
-  const teControlerenTekst = [onderwerp ?? "", tekst, toon ?? ""].join("\n");
+  // Genormaliseerde velden zijn ook wat straks naar het model gaat: een
+  // omzeiling die alleen op de weergave werkt (zero-width, homoglyph, rare
+  // spatie) verdwijnt hier voorgoed in plaats van dat hij de gate passeert
+  // en alsnog bij het model belandt.
+  const onderwerp = onderwerpRuw ? normaliseerTekst(onderwerpRuw) : null;
+  const toon = toonRuw ? normaliseerTekst(toonRuw) : null;
+  const tekstGenormaliseerd = normaliseerTekst(tekst);
+
+  const teControlerenTekst = [onderwerp ?? "", tekstGenormaliseerd, toon ?? ""].join("\n");
   const gate = privacyGate(teControlerenTekst);
   if (!gate.ok) {
     return NextResponse.json(
@@ -108,11 +121,17 @@ export async function POST(request: NextRequest) {
 
   const start = Date.now();
   try {
-    const prompt = bouwPrompt({ onderwerp, tekst, toon });
+    const prompt = bouwPrompt({ onderwerp, tekst: tekstGenormaliseerd, toon });
     const systeeminstructie = systeeminstructieVoor(taak);
     const resultaat = await genereerAssistVoorstel(taak, systeeminstructie, prompt);
+    // Kastlijntje/gedachtestreepje horen hier nooit in te staan (zie de
+    // GEMEENSCHAPPELIJKE_REGELS in assist-tasks.ts), maar een model doet
+    // bijna altijd wat gevraagd is, en "bijna" is niet genoeg: hard
+    // afgedwongen, niet aan de instructie overgelaten.
+    const voorstelSchoon = zonderKastlijntje(resultaat.voorstel);
+    const onderwerpSchoon = resultaat.onderwerp ? zonderKastlijntje(resultaat.onderwerp) : null;
 
-    const teControlerenOutput = resultaat.voorstel + " " + (resultaat.onderwerp ?? "");
+    const teControlerenOutput = voorstelSchoon + " " + (onderwerpSchoon ?? "");
     const guard = assistOutputGuard(teControlerenTekst, teControlerenOutput);
     if (!guard.ok) {
       console.warn("AI-assist geblokkeerd door output-guard", { taak, duurMs: Date.now() - start });
@@ -123,7 +142,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.info("AI-assist voltooid", { taak, duurMs: Date.now() - start, status: "ok" });
-    return NextResponse.json({ onderwerp: resultaat.onderwerp, voorstel: resultaat.voorstel });
+    return NextResponse.json({ onderwerp: onderwerpSchoon, voorstel: voorstelSchoon });
   } catch {
     console.error("AI-assist mislukt", { taak, duurMs: Date.now() - start, status: "fout" });
     return NextResponse.json(
