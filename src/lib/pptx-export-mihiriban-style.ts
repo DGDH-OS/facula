@@ -1,5 +1,6 @@
 import path from "path";
 import { Automizer, modify, type ISlide } from "pptx-automizer";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { GeneratedLesson, LessonPart, LessonSection } from "./types";
 import { slugify } from "./pptx-export";
 import { AI_MELDING_EXPORT } from "./ai-transparantie";
@@ -43,6 +44,35 @@ import {
 
 const TEMPLATE_FILE = "mihiriban-template.pptx";
 const TEMPLATE_DIR = path.join(process.cwd(), "src", "templates");
+
+/** R2-sleutel van het sjabloon in de bucket achter de FACULA_TEMPLATES-binding. */
+const TEMPLATE_R2_KEY = "mihiriban-template.pptx";
+
+interface TemplateBucket {
+  get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
+}
+
+/**
+ * Het sjabloon voor pptx-automizer. Op Cloudflare Workers bestaat src/templates
+ * niet als bestand (er is geen projectmap op schijf), daar komen de bytes uit
+ * de R2-binding FACULA_TEMPLATES. Overal anders (Vercel, lokaal) blijft het de
+ * bestandsnaam in TEMPLATE_DIR, precies zoals voorheen.
+ */
+async function laadSjabloon(): Promise<string | Uint8Array> {
+  let bucket: TemplateBucket | undefined;
+  try {
+    bucket = (getCloudflareContext().env as { FACULA_TEMPLATES?: TemplateBucket })
+      .FACULA_TEMPLATES;
+  } catch {
+    return TEMPLATE_FILE;
+  }
+  if (!bucket) return TEMPLATE_FILE;
+  const object = await bucket.get(TEMPLATE_R2_KEY);
+  if (!object) {
+    throw new Error("Sjabloon ontbreekt in R2: " + TEMPLATE_R2_KEY);
+  }
+  return new Uint8Array(await object.arrayBuffer());
+}
 
 /**
  * De diamaat van het sjabloon, in inch (12192000 x 6858000 EMU, dus 16:9).
@@ -209,9 +239,10 @@ export async function bouwMihiribanPptxBuffer(
     removeExistingSlides: true,
   });
 
+  const sjabloon = await laadSjabloon();
   const pres = automizer
-    .loadRoot(TEMPLATE_FILE)
-    .load(TEMPLATE_FILE, "tpl");
+    .loadRoot(sjabloon)
+    .load(sjabloon, "tpl");
 
   const voegLesBlokToe = (deel: LessonPart, idx: number) => {
     const terugblikSectie = vindSectie(deel.secties, "1.");

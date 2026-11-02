@@ -29,8 +29,24 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Deploy (Cloudflare Workers via OpenNext)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Live: https://facula-app.dgdh-os.workers.dev (worker `facula-app`, account DGDH OS).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `wrangler.jsonc`: worker config, R2 incremental cache (`opennext-cache-facula`, EU),
+  R2 bucket `facula-templates` (EU) with `mihiriban-template.pptx` for the PowerPoint export,
+  cron trigger `0 5 * * *` for `/api/cron/bronnen-archief`.
+- `cf-worker.ts`: custom entry that wraps `.open-next/worker.js` and adds the `scheduled` handler
+  (calls the cron route with `Authorization: Bearer $CRON_SECRET`).
+- Build: `NEXT_PUBLIC_SUPABASE_URL=... NEXT_PUBLIC_SUPABASE_ANON_KEY=... npx opennextjs-cloudflare build`
+  (the public vars are inlined at build time).
+- Deploy: `npx opennextjs-cloudflare populateCache remote && npx wrangler deploy`
+  with `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` set. Runtime secrets live on the worker
+  (`wrangler secret put`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+  `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`.
+- If `src/templates/mihiriban-template.pptx` changes, upload it again:
+  `npx wrangler r2 object put facula-templates/mihiriban-template.pptx --file src/templates/mihiriban-template.pptx --jurisdiction eu --remote`.
+
+Known gaps on Workers: Vertex AI via Workload Identity Federation needs a Vercel OIDC token
+(not available on Cloudflare, lessons fall back to the template generator); logo upload uses
+`sharp` (native, not available on Workers).

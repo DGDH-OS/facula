@@ -10,10 +10,13 @@
     "typecheck": "tsc --noEmit",
     "test:reports": "tsx scripts/report-test.ts",
     "test:coach": "tsx scripts/coach-test.ts",
-    "test:nakijken": "tsx scripts/nakijk-test.ts"
-    ,"test:ouders": "tsx scripts/ouders-test.ts"
-    ,"test:toetsweek": "tsx scripts/toetsweek-test.ts"
-    ,"test:agent": "tsx scripts/agent-test.ts"
+    "test:nakijken": "tsx scripts/nakijk-test.ts",
+    "test:ouders": "tsx scripts/ouders-test.ts",
+    "test:toetsweek": "tsx scripts/toetsweek-test.ts",
+    "test:agent": "tsx scripts/agent-test.ts",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -22,7 +25,7 @@
     "docx": "^9.7.1",
     "google-auth-library": "^11.1.0",
     "jszip": "^3.10.2",
-    "next": "16.3.5",
+    "next": "16.4.3",
     "pptx-automizer": "^0.9.3",
     "pptxgenjs": "^4.0.1",
     "react": "19.2.8",
@@ -31,14 +34,16 @@
     "stripe": "^22.6.2"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.15",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.5",
+    "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.156.1"
   }
 }
